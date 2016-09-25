@@ -37,7 +37,7 @@ start_vpn() {
     --user=$VPN_USER \
     --authgroup=$VPN_AUTH_GROUP \
     --script=$BASEDIR/vpnc-split-traffic \
-		--pid-file=$OPENCONNECT_PID \
+		--pid-file=$OPENCONNECT_PIDFILE \
 		-b
 	if [ $? -ne 0 ]; then
 		return $?
@@ -52,10 +52,10 @@ start_vpn() {
 
 stop_vpn() {
 	echo "Collapsing VPN tunnel"
-  sudo route delete -host $REMOTE_PROXY -interface $TUN_IF
-	sudo pkill -F $OPENCONNECT_PID
+  sudo route delete -host $REMOTE_PROXY_HOST -interface $TUN_IF
+	sudo pkill -F $OPENCONNECT_PIDFILE
 	# echo Waiting for openconnect to terminate
-	# anywait `cat $OPENCONNECT_PID`
+	# anywait $(cat $OPENCONNECT_PIDFILE)
 }
 
 start_proxy() {
@@ -72,8 +72,9 @@ start_proxy() {
   echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" >> $SEDFILE
   sed -f $SEDFILE $BASEDIR/squid.template.conf > $BASEDIR/squid.conf
 	rm $SEDFILE
-	#echo "Starting Proxy"
-	#/usr/local/sbin/squid -f $BASEDIR/squid.conf
+	
+	echo "Starting Proxy"
+	/usr/local/sbin/squid -f $BASEDIR/squid.conf
 }
 
 stop_proxy() {
