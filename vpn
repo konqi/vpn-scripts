@@ -29,15 +29,15 @@ shutdown() {
 
 start_vpn() {
 	echo "Digging VPN tunnel"	
-  sudo openconnect $VPN_HOST \
+  sudo openconnect "$VPN_HOST" \
     --useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
     --local-hostname=FooBars-PC \
     --os=win \
     --no-cert-check \
-    --user=$VPN_USER \
-    --authgroup=$VPN_AUTH_GROUP \
-    --script=$BASEDIR/vpnc-split-traffic \
-		--pid-file=$OPENCONNECT_PIDFILE \
+    --user="$VPN_USER" \
+    --authgroup="$VPN_AUTH_GROUP" \
+    --script="$BASEDIR/vpnc-split-traffic" \
+		--pid-file="$OPENCONNECT_PIDFILE" \
 		-b
 	if [ $? -ne 0 ]; then
 		return $?
@@ -47,41 +47,43 @@ start_vpn() {
 
 	sleep 5
 	# add route for remote proxy
-  sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+  sudo route add -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 }
 
 stop_vpn() {
 	echo "Collapsing VPN tunnel"
-  sudo route delete -host $REMOTE_PROXY_HOST -interface $TUN_IF
-	sudo pkill -F $OPENCONNECT_PIDFILE
+  sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
+	sudo pkill -F "$OPENCONNECT_PIDFILE"
 	# echo Waiting for openconnect to terminate
 	# anywait $(cat $OPENCONNECT_PIDFILE)
 }
 
 start_proxy() {
   echo "Generating Proxy Configuration"
-	URL_USR=$(urlencode $REMOTE_PROXY_USERNAME)
-	URL_PWD=$(urlencode $REMOTE_PROXY_PASSWORD)
+	URL_USR=$(urlencode "$REMOTE_PROXY_USERNAME")
+	URL_PWD=$(urlencode "$REMOTE_PROXY_PASSWORD")
 	SEDFILE=$(mktemp -t 'sed.XXXXXXXXXX')
-	echo "s~\${PROXY_PORT}~$PROXY_PORT~g" >> $SEDFILE
-  echo "s~\${PROXY_PIDFILE}~$PROXY_PIDFILE~g" >> $SEDFILE
-  echo "s~\${REMOTE_PROXY_DOMAINS}~$REMOTE_PROXY_DOMAINS~g" >> $SEDFILE
-  echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g" >> $SEDFILE
-  echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g" >> $SEDFILE
-  echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g" >> $SEDFILE
-  echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" >> $SEDFILE
-  sed -f $SEDFILE $BASEDIR/squid.template.conf > $BASEDIR/squid.conf
-	rm $SEDFILE
+	{
+		echo "s~\${PROXY_PORT}~$PROXY_PORT~g"
+  	echo "s~\${PROXY_PIDFILE}~$PROXY_PIDFILE~g"
+  	echo "s~\${REMOTE_PROXY_DOMAINS}~$REMOTE_PROXY_DOMAINS~g"
+  	echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g"
+  	echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g"
+  	echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g"
+  	echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" 
+	} >> "$SEDFILE"
+  sed -f "$SEDFILE $BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
+	rm "$SEDFILE"
 	
 	echo "Starting Proxy"
-	/usr/local/sbin/squid -f $BASEDIR/squid.conf
+	/usr/local/sbin/squid -f "$BASEDIR/squid.conf"
 }
 
 stop_proxy() {
 	echo "Stopping Proxy"
-  /usr/local/sbin/squid -f $BASEDIR/squid.conf -k shutdown
+  /usr/local/sbin/squid -f "$BASEDIR/squid.conf" -k shutdown
 	echo Waiting for proxy to terminate
-	anywait "$(cat $PROXY_PIDFILE)"
+	anywait "$(cat "$PROXY_PIDFILE")"
 }
 
 setup_env() {
