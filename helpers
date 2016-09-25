@@ -1,0 +1,51 @@
+#!/bin/bash
+
+anywait(){
+  for pid in "$@"; do
+    while kill -0 "$pid"; do
+      echo -n "."
+      sleep 0.5
+    done
+  done
+}
+
+urlencode() {
+    # urlencode <string>
+    old_lc_collate=$LC_COLLATE
+    LC_COLLATE=C
+
+    local length="${#1}"
+    for (( i = 0; i < length; i++ )); do
+        local c="${1:$i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-]) printf "%s" "$c" ;;
+            *) printf '%%%02X' "'$c" ;;
+        esac
+    done
+
+    LC_COLLATE=$old_lc_collate
+}
+
+mac_find_active_service() {
+  services="$(networksetup -listnetworkserviceorder | grep 'Hardware Port')"
+
+  while read -r line; do
+    sname="$(echo "$line" | awk -F  "(, )|(: )|[)]" '{print $2}')"
+    sdev="$(echo "$line" | awk -F  "(, )|(: )|[)]" '{print $4}')"
+    #echo "Current service: $sname, $sdev, $currentservice"
+    if [ -n "$sdev" ]; then
+      ifconfig "$sdev" 2>/dev/null | grep 'status: active' > /dev/null 2>&1
+      rc="$?"
+      if [ "$rc" -eq 0 ]; then
+        currentservice="$sname"
+      fi
+    fi
+  done <<< "$services"
+
+  if [ -n "$currentservice" ]; then
+    echo "$currentservice"
+  else
+    >&2 echo "Could not find current service"
+    exit 1
+  fi
+}

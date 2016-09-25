@@ -1,0 +1,147 @@
+#!/bin/bash
+source helpers
+source vpn.conf 
+
+startup() {
+	# get permission to sudo stuff
+	echo "Please enter your user password (Mac)"
+	sudo echo "Thank you"
+
+	start_vpn
+	if [ $? -ne 0 ]; then
+		echo "Could not start VPN tunnel"
+		return $?
+	fi	
+	start_proxy
+	setup_mac_env
+	setup_env
+}
+
+shutdown() {
+	echo "Please enter your user password (Mac)"
+	sudo echo "Thank you"
+
+	reset_env
+	reset_mac_env
+	stop_proxy
+	stop_vpn
+}
+
+start_vpn() {
+	echo "Digging VPN tunnel"	
+  sudo openconnect $VPN_HOST \
+    --useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
+    --local-hostname=FooBars-PC \
+    --os=win \
+    --no-cert-check \
+    --user=$VPN_USER \
+    --authgroup=$VPN_AUTH_GROUP \
+    --script=$BASEDIR/vpnc-split-traffic \
+		--pid-file=$OPENCONNECT_PID \
+		-b
+	if [ $? -ne 0 ]; then
+		return $?
+	fi
+
+	echo "Result Code $?"
+
+	sleep 5
+	# add route for remote proxy
+  sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+}
+
+stop_vpn() {
+	echo "Collapsing VPN tunnel"
+  sudo route delete -host $REMOTE_PROXY -interface $TUN_IF
+	sudo pkill -F $OPENCONNECT_PID
+	# echo Waiting for openconnect to terminate
+	# anywait `cat $OPENCONNECT_PID`
+}
+
+start_proxy() {
+  echo "Generating Proxy Configuration"
+	URL_USR=$(urlencode $REMOTE_PROXY_USERNAME)
+	URL_PWD=$(urlencode $REMOTE_PROXY_PASSWORD)
+	SEDFILE=$(mktemp -t 'sed.XXXXXXXXXX')
+	echo "s~\${PROXY_PORT}~$PROXY_PORT~g" >> $SEDFILE
+  echo "s~\${PROXY_PIDFILE}~$PROXY_PIDFILE~g" >> $SEDFILE
+  echo "s~\${REMOTE_PROXY_DOMAINS}~$REMOTE_PROXY_DOMAINS~g" >> $SEDFILE
+  echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g" >> $SEDFILE
+  echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g" >> $SEDFILE
+  echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g" >> $SEDFILE
+  echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" >> $SEDFILE
+  sed -f $SEDFILE $BASEDIR/squid.template.conf > $BASEDIR/squid.conf
+	rm $SEDFILE
+	#echo "Starting Proxy"
+	#/usr/local/sbin/squid -f $BASEDIR/squid.conf
+}
+
+stop_proxy() {
+	echo "Stopping Proxy"
+  /usr/local/sbin/squid -f $BASEDIR/squid.conf -k shutdown
+	echo Waiting for proxy to terminate
+	anywait "$(cat $PROXY_PIDFILE)"
+}
+
+setup_env() {
+  PROXY="$PROXY_HOST:$PROXY_PORT"
+ 	
+	echo
+	echo Copy these lines into the terminal you wish to use
+	echo
+	echo export https_proxy="http://$PROXY"
+  echo export http_proxy="http://$PROXY"
+  echo export HTTPS_PROXY="http://$PROXY"
+  echo export HTTP_PROXY="http://$PROXY"
+	echo
+	echo
+	echo
+}
+
+reset_env() {
+	echo
+	echo Copy these lines to unset the proxy from a termina
+	echo
+	echo unset https_proxy
+  echo unset http_proxy
+  echo unset HTTPS_PROXY
+  echo unset HTTP_PROXY
+	echo
+	echo
+	echo
+}
+
+setup_mac_env() {
+	echo "Configuring Mac OS network settings"
+	SERVICE="$(mac_find_active_service)"
+	sudo networksetup -setwebproxy "$SERVICE" "$PROXY_HOST" "$PROXY_PORT"
+	sudo networksetup -setwebproxystate "$SERVICE" on
+	sudo networksetup -setsecurewebproxy "$SERVICE" "$PROXY_HOST" "$PROXY_PORT"
+	sudo networksetup -setsecurewebproxystate "$SERVICE" on
+}
+
+reset_mac_env() {
+	echo "Restoring Mac OS network settings"
+	SERVICE="$(mac_find_active_service)"
+	echo "Disableding Proxy for $SERVICE"
+	sudo networksetup -setwebproxystate "$SERVICE" off
+	echo "Disableding Secure Proxy for $SERVICE"
+	sudo networksetup -setsecurewebproxystate "$SERVICE" off
+}
+
+if [ -n "$1" ]; then
+	case "$1" in
+					start)
+									startup
+									;;
+					stop)
+									shutdown
+									;;
+					encode)
+									urlencode "$2"
+									;;
+					*)
+									echo "usage: $0 <start|stop>"
+									;;
+	esac
+fi
