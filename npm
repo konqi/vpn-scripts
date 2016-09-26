@@ -1,0 +1,36 @@
+#!/bin/bash
+
+source vpn.conf
+source npm.conf
+
+setup_npm() {
+  echo "Configuring NPM for specific Nexus"
+  _auth=$(echo -n "$NEXUS_USERNAME:$NEXUS_PASSWORD" | openssl base64)
+
+  npm config set _auth "$_auth"
+  npm config set always-auth true
+  npm config set email "$NEXUS_EMAIL"
+  npm config set git-tag-version false
+  npm config set https-proxy "http://$PROXY_HOST:$PROXY_PORT"
+  npm config set proxy "http://$PROXY_HOST:$PROXY_PORT"
+  npm config set registry "$NPM_REGISTRY"
+  npm config set strict-ssl false
+
+  # git config --global url."http://github.com/".insteadOf git@github.com:
+  # git config --global url."http://".insteadOf git://
+}
+
+reset_npm() {
+  echo "Removing specific Nexus related settings from NPM"
+  npm config delete _auth
+  npm config delete always-auth
+  npm config delete email
+  npm config delete git-tag-version
+  npm config delete https-proxy
+  npm config delete proxy
+  npm config delete registry
+  npm config delete strict-ssl
+
+  # git config --global url."http://github.com/".insteadOf git@github.com:
+  # git config --global url."http://".insteadOf git://
+}
