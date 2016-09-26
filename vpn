@@ -12,6 +12,11 @@ startup() {
 		echo "Could not start VPN tunnel"
 		return $?
 	fi	
+	setup_routes
+	if [ $? -ne 0 ]; then
+		echo "Could not setup routes"
+		return $?
+	fi	
 	start_proxy
 	setup_mac_env
 	setup_env
@@ -24,7 +29,20 @@ shutdown() {
 	reset_env
 	reset_mac_env
 	stop_proxy
+	remove_routes
 	stop_vpn
+}
+
+setup_routes() {
+	# add route for remote proxy
+	echo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+  sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+
+	return $?
+}
+
+remove_routes() {
+  sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 }
 
 start_vpn() {
@@ -39,6 +57,7 @@ start_vpn() {
     --script="$BASEDIR/vpnc-split-traffic" \
 		--pid-file="$OPENCONNECT_PIDFILE" \
 		-b
+
 	if [ $? -ne 0 ]; then
 		return $?
 	fi
@@ -46,13 +65,10 @@ start_vpn() {
 	echo "Result Code $?"
 
 	sleep 5
-	# add route for remote proxy
-  sudo route add -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 }
 
 stop_vpn() {
 	echo "Collapsing VPN tunnel"
-  sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 	sudo pkill -F "$OPENCONNECT_PIDFILE"
 	# echo Waiting for openconnect to terminate
 	# anywait $(cat $OPENCONNECT_PIDFILE)
@@ -72,7 +88,7 @@ start_proxy() {
   	echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g"
   	echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" 
 	} >> "$SEDFILE"
-  sed -f "$SEDFILE $BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
+  sed -f "$SEDFILE" "$BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
 	rm "$SEDFILE"
 	
 	echo "Starting Proxy"
