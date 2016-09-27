@@ -36,25 +36,25 @@ shutdown() {
 setup_routes() {
 	# add route for remote proxy
 	echo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
-  sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+	sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
 
 	return $?
 }
 
 remove_routes() {
-  sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
+	sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 }
 
 start_vpn() {
 	echo "Digging VPN tunnel"
-  sudo openconnect "$VPN_HOST" \
-    --useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
-    --local-hostname=FooBars-PC \
-    --os=win \
-    --no-cert-check \
-    --user="$VPN_USER" \
-    --authgroup="$VPN_AUTH_GROUP" \
-    --script="$BASEDIR/vpnc-split-traffic" \
+	sudo openconnect "$VPN_HOST" \
+		--useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
+		--local-hostname=FooBars-PC \
+		--os=win \
+		--no-cert-check \
+		--user="$VPN_USER" \
+		--authgroup="$VPN_AUTH_GROUP"∏\
+		--script="$BASEDIR/vpnc-split-traffic" \
 		--pid-file="$OPENCONNECT_PIDFILE" \
 		--printcookie \
 		-b
@@ -76,20 +76,20 @@ stop_vpn() {
 }
 
 start_proxy() {
-  echo "Generating Proxy Configuration"
+	echo "Generating Proxy Configuration"
 	URL_USR=$(urlencode "$REMOTE_PROXY_USERNAME")
 	URL_PWD=$(urlencode "$REMOTE_PROXY_PASSWORD")
 	SEDFILE=$(mktemp -t 'sed.XXXXXXXXXX')
 	{
 		echo "s~\${PROXY_PORT}~$PROXY_PORT~g"
-  	echo "s~\${PROXY_PIDFILE}~$PROXY_PIDFILE~g"
-  	echo "s~\${REMOTE_PROXY_DOMAINS}~$REMOTE_PROXY_DOMAINS~g"
-  	echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g"
-  	echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g"
-  	echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g"
-  	echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g"
+		echo "s~\${PROXY_PIDFILE}~$PROXY_PIDFILE~g"
+		echo "s~\${REMOTE_PROXY_DOMAINS}~$REMOTE_PROXY_DOMAINS~g"
+		echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g"
+		echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g"
+		echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g"
+		echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g"
 	} >> "$SEDFILE"
-  sed -f "$SEDFILE" "$BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
+	sed -f "$SEDFILE" "$BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
 	rm "$SEDFILE"
 
 	echo "Starting Proxy"
@@ -98,21 +98,21 @@ start_proxy() {
 
 stop_proxy() {
 	echo "Stopping Proxy"
-  /usr/local/sbin/squid -f "$BASEDIR/squid.conf" -k shutdown
+	/usr/local/sbin/squid -f "$BASEDIR/squid.conf" -k shutdown
 	echo Waiting for proxy to terminate
 	anywait "$(cat "$PROXY_PIDFILE")"
 }
 
 setup_env() {
-  PROXY="$PROXY_HOST:$PROXY_PORT"
+	PROXY="$PROXY_HOST:$PROXY_PORT"
 
 	echo
 	echo Copy these lines into the terminal you wish to use
 	echo
 	echo export https_proxy="http://$PROXY"
-  echo export http_proxy="http://$PROXY"
-  echo export HTTPS_PROXY="http://$PROXY"
-  echo export HTTP_PROXY="http://$PROXY"
+	echo export http_proxy="http://$PROXY"
+	echo export HTTPS_PROXY="http://$PROXY"
+	echo export HTTP_PROXY="http://$PROXY"
 	echo
 	echo
 	echo
@@ -123,9 +123,9 @@ reset_env() {
 	echo Copy these lines to unset the proxy from a termina
 	echo
 	echo unset https_proxy
-  echo unset http_proxy
-  echo unset HTTPS_PROXY
-  echo unset HTTP_PROXY
+	echo unset http_proxy
+	echo unset HTTPS_PROXY
+	echo unset HTTP_PROXY
 	echo
 	echo
 	echo
