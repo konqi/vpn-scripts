@@ -1,6 +1,6 @@
 #!/bin/bash
 source helpers
-source vpn.conf 
+source vpn.conf
 
 startup() {
 	# get permission to sudo stuff
@@ -11,12 +11,12 @@ startup() {
 	if [ $? -ne 0 ]; then
 		echo "Could not start VPN tunnel"
 		return $?
-	fi	
+	fi
 	setup_routes
 	if [ $? -ne 0 ]; then
 		echo "Could not setup routes"
 		return $?
-	fi	
+	fi
 	start_proxy
 	setup_mac_env
 	setup_env
@@ -46,7 +46,7 @@ remove_routes() {
 }
 
 start_vpn() {
-	echo "Digging VPN tunnel"	
+	echo "Digging VPN tunnel"
   sudo openconnect "$VPN_HOST" \
     --useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
     --local-hostname=FooBars-PC \
@@ -56,6 +56,7 @@ start_vpn() {
     --authgroup="$VPN_AUTH_GROUP" \
     --script="$BASEDIR/vpnc-split-traffic" \
 		--pid-file="$OPENCONNECT_PIDFILE" \
+		--printcookie \
 		-b
 
 	if [ $? -ne 0 ]; then
@@ -69,7 +70,7 @@ start_vpn() {
 
 stop_vpn() {
 	echo "Collapsing VPN tunnel"
-	sudo pkill -F "$OPENCONNECT_PIDFILE"
+	sudo pkill -SIGINT -F "$OPENCONNECT_PIDFILE"
 	# echo Waiting for openconnect to terminate
 	# anywait $(cat $OPENCONNECT_PIDFILE)
 }
@@ -86,11 +87,11 @@ start_proxy() {
   	echo "s~\${REMOTE_PROXY_HOST}~$REMOTE_PROXY_HOST~g"
   	echo "s~\${REMOTE_PROXY_PORT}~$REMOTE_PROXY_PORT~g"
   	echo "s~\${REMOTE_PROXY_USERNAME}~$URL_USR~g"
-  	echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g" 
+  	echo "s~\${REMOTE_PROXY_PASSWORD}~$URL_PWD~g"
 	} >> "$SEDFILE"
   sed -f "$SEDFILE" "$BASEDIR/squid.template.conf" > "$BASEDIR/squid.conf"
 	rm "$SEDFILE"
-	
+
 	echo "Starting Proxy"
 	/usr/local/sbin/squid -f "$BASEDIR/squid.conf"
 }
@@ -104,7 +105,7 @@ stop_proxy() {
 
 setup_env() {
   PROXY="$PROXY_HOST:$PROXY_PORT"
- 	
+
 	echo
 	echo Copy these lines into the terminal you wish to use
 	echo
@@ -150,17 +151,17 @@ reset_mac_env() {
 
 if [ -n "$1" ]; then
 	case "$1" in
-					start)
-									startup
-									;;
-					stop)
-									shutdown
-									;;
-					encode)
-									urlencode "$2"
-									;;
-					*)
-									echo "usage: $0 <start|stop>"
-									;;
+		start)
+			startup
+			;;
+		stop)
+			shutdown
+			;;
+		encode)
+			urlencode "$2"
+			;;
+		*)
+			echo "usage: $0 <start|stop>"
+			;;
 	esac
 fi

@@ -34,3 +34,17 @@ reset_npm() {
   # git config --global url."http://github.com/".insteadOf git@github.com:
   # git config --global url."http://".insteadOf git://
 }
+
+if [ -n "$1" ]; then
+	case "$1" in
+		start)
+			setup_npm
+			;;
+		stop)
+			reset_npm
+			;;
+		*)
+			echo "Usage: $0 <start|stop>"
+			;;
+	esac
+fi
