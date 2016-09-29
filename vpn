@@ -35,14 +35,15 @@ shutdown() {
 
 setup_routes() {
 	# add route for remote proxy
-	echo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
-	sudo route add -host $REMOTE_PROXY_HOST -interface $TUN_IF
+	sudo route add -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
 
 	return $?
 }
 
 remove_routes() {
 	sudo route delete -host "$REMOTE_PROXY_HOST" -interface "$TUN_IF"
+
+	return $?
 }
 
 start_vpn() {
@@ -59,18 +60,12 @@ start_vpn() {
 		--printcookie \
 		-b
 
-	if [ $? -ne 0 ]; then
-		return $?
-	fi
-
-	echo "Result Code $?"
-
-	sleep 5
+	return $?
 }
 
 stop_vpn() {
 	echo "Collapsing VPN tunnel"
-	sudo pkill -SIGINT -F "$OPENCONNECT_PIDFILE"
+	sudo pkill -F "$OPENCONNECT_PIDFILE"
 	# echo Waiting for openconnect to terminate
 	# anywait $(cat $OPENCONNECT_PIDFILE)
 }
@@ -106,29 +101,25 @@ stop_proxy() {
 setup_env() {
 	PROXY="$PROXY_HOST:$PROXY_PORT"
 
-	echo
-	echo Copy these lines into the terminal you wish to use
-	echo
+	printf "######################################################\n"
+	printf "# Copy these lines into the terminal you wish to use #\n"
+	printf "######################################################\n"
 	echo export https_proxy="http://$PROXY"
 	echo export http_proxy="http://$PROXY"
 	echo export HTTPS_PROXY="http://$PROXY"
 	echo export HTTP_PROXY="http://$PROXY"
-	echo
-	echo
-	echo
+	printf "######################################################\n"
 }
 
 reset_env() {
-	echo
-	echo Copy these lines to unset the proxy from a termina
-	echo
-	echo unset https_proxy
+	printf "######################################################\n"
+	printf "# Copy these lines into the terminal you wish to use #\n"
+	printf "######################################################\n"
+  echo unset https_proxy
 	echo unset http_proxy
 	echo unset HTTPS_PROXY
 	echo unset HTTP_PROXY
-	echo
-	echo
-	echo
+	printf "######################################################\n"
 }
 
 setup_mac_env() {
@@ -156,6 +147,12 @@ if [ -n "$1" ]; then
 			;;
 		stop)
 			shutdown
+			;;
+		re)
+			remove_routes
+			stop_vpn
+			start_vpn
+			setup_routes
 			;;
 		encode)
 			urlencode "$2"

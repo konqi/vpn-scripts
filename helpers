@@ -49,3 +49,7 @@ mac_find_active_service() {
 		exit 1
 	fi
 }
+
+mac_notify() {
+	/usr/bin/osascript -e "display notification \"$*\""
+}
