@@ -2,3 +2,4 @@ vpn.conf
 squid.conf
 npm.conf
 *.pid
+squid/

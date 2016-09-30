@@ -2,7 +2,7 @@
 
 anywait(){
 	for pid in "$@"; do
-		while kill -0 "$pid"; do
+		while kill -0 "$pid" 2> /dev/null; do
 			echo -n "."
 			sleep 0.5
 		done
@@ -52,4 +52,8 @@ mac_find_active_service() {
 
 mac_notify() {
 	/usr/bin/osascript -e "display notification \"$*\""
+}
+
+detect_os() {
+	echo $(uname -s)
 }
