@@ -6,6 +6,7 @@ startup() {
 	# get permission to sudo stuff
 	echo "Please enter your user password (Machine User)"
 	sudo echo "Thank you"
+	sudo chmod u+x "$BASEDIR/vpnc-split-traffic"
 
 	start_vpn
 	if [ $? -ne 0 ]; then
