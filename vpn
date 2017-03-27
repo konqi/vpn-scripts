@@ -33,6 +33,13 @@ shutdown() {
 	stop_proxy
 	remove_routes
 	stop_vpn
+
+	if [ ! -z "$POST_VPN_DOWN" ]; then
+		echo "Executing POST shutdown hook"
+		for ((i=0; i<${#POST_VPN_DOWN[@]}; ++i)); do
+			eval "sudo ${POST_VPN_DOWN[$i]}"
+		done
+	fi
 }
 
 setup_routes() {
@@ -54,13 +61,13 @@ start_vpn() {
 		--useragent='Cisco AnyConnect VPN Agent for Windows 3.1.04072' \
 		--local-hostname=FooBars-PC \
 		--os=win \
-		--no-cert-check \
 		--user="$VPN_USER" \
 		--authgroup="$VPN_AUTH_GROUP"∏\
 		--script="$BASEDIR/vpnc-split-traffic" \
 		--pid-file="$OPENCONNECT_PIDFILE" \
 		--printcookie \
-		-b
+		-b \
+		$VPN_EXTRA
 
 	return $?
 }
